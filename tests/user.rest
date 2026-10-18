@@ -1,0 +1,25 @@
+### Get all weather reports as user
+GET http://localhost:4000/weather
+
+### Get one weather report as user
+GET http://localhost:4000/weather/1
+
+### Update user name and email
+PATCH http://localhost:4000/users/2
+Content-Type: application/json
+
+{
+    "username": "Belaaaaa",
+    "email": "belaaaaa@gmail.com",
+    "luid": 2
+}
+
+### Change user password
+POST http://localhost:4000/users/3/passmod
+Content-Type: application/json
+
+{
+    "oldpass": "s",
+    "newpass": "12345Ab!",
+    "confirm": "12345Ab!"
+}

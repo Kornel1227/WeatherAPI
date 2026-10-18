@@ -1,0 +1,26 @@
+### Get all weather reports as user
+GET http://localhost:4000/weather
+
+### Get one weather report as user
+GET http://localhost:4000/weather/2
+
+
+### Guest registration
+POST http://localhost:4000/register
+Content-Type: application/json
+
+{
+    "name": "Test Guest",
+    "email": "guesttest@gmail.com",
+    "password": "Test1234!",
+    "confirm": "Test1234!"
+}
+
+### Guest login
+POST http://localhost:4000/users/login
+Content-Type: application/json
+
+{
+    "email": "guesttest@gmail.com",
+    "password": "Test1234!"
+}

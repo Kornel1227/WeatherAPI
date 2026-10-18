@@ -32,7 +32,15 @@ app.get('/', (req, res) =>{
 })
 
 //GET weather 
+app.get('/weather', (req, res) => {
+    pool.query('SELECT * FROM weather_forecasts ORDER BY date ASC, location ASC', (error, results) => {
+        if(error){
+            return res.status(500).json({error: 'Database query error'});
+        }
 
+        return res.status(200).json(results);
+    });
+});
 
 
 //POST register 
@@ -59,7 +67,7 @@ app.post('/register', (req, res) => {
             return res.status(400).json({ error: 'This e-mail already exists' });
         }
 
-        pool.query('INSERT INTO users (name,email, password, role) VALUES (?, ?, SHA1(?), "user")', [name, email, passwd], (error, results) => {
+        pool.query('INSERT INTO users (name,email, password, role) VALUES (?, ?, SHA1(?), "user")', [name, email, password], (error, results) => {
             if(error) {
                 return res.status(500).json({ error: 'Database error', error });
             }
@@ -276,7 +284,25 @@ app.post('/users/:uid/passmod', (req,res) => {
 
 
 //GET weather details
+app.get('/weather/:id', (req, res) => {
+    const id = req.params.id;
 
+    if(!id){
+        return res.status(400).json({error: 'Missing weather ID'});
+    }
+
+    pool.query('SELECT * FROM weather_forecasts WHERE ID=?', [id], (error, results) => {
+        if(error){
+            return res.status(500).json({error: 'Database query error'});
+        }
+
+        if(results.length == 0){
+            return res.status(404).json({error: 'Weather forecast with this ID does not exist!'});
+        }
+
+        return res.status(200).json({results: results[0]});
+    });
+});
 
 //ADMIN ENDPOINTS:
 //-----------------------------
@@ -309,13 +335,161 @@ app.post('/admin/users', (req, res) => {
 
 
 //POST weather 
+app.post('/admin/weather', (req, res) => {
+    const { date, location, temp_min, temp_max, weather_type,
+        precipitation_probability, wind_speed, uv_index, luid } = req.body;
 
+    if(!date || !location || temp_min === undefined || temp_max === undefined || !weather_type || !luid){
+        return res.status(400).json({error: 'Missing required fields!'});
+    }
+
+    if(Number(temp_min) > Number(temp_max)){
+        return res.status(400).json({error: 'Minimum temperature cannot be greater than maximum temperature!'});
+    }
+
+    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results1) => {
+        if(error){
+            return res.status(500).json({error: 'Database query error!'});
+        }
+
+        if(results1.length == 0){
+            return res.status(400).json({error: 'User with this ID does not exist!'});
+        }
+
+        if(results1[0].role != 'admin'){
+            return res.status(403).json({error: 'You do not have permission to add weather data!'});
+        }
+
+        pool.query(
+            `INSERT INTO weather_forecasts
+            (date, location, temp_min, temp_max, weather_type, precipitation_probability, wind_speed, uv_index)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                date,
+                location,
+                temp_min,
+                temp_max,
+                weather_type,
+                precipitation_probability === undefined ? 0 : precipitation_probability,
+                wind_speed === undefined ? 0 : wind_speed,
+                uv_index === undefined || uv_index === '' ? null : uv_index
+            ],
+            (error, results) => {
+                if(error){
+                    return res.status(500).json({error: 'Database insert error'});
+                }
+
+                return res.status(200).json({message: 'Weather data added successfully!', ID: results.insertId});
+            }
+        );
+    });
+});
 
 //PATCH weather 
+app.patch('/admin/weather/:id', (req, res) => {
+    const id = req.params.id;
+    const { date, location, temp_min, temp_max, weather_type,
+        precipitation_probability, wind_speed, uv_index, luid } = req.body;
 
+    if(!id || !date || !location || temp_min === undefined || temp_max === undefined || !weather_type || !luid){
+        return res.status(400).json({error: 'Missing required fields!'});
+    }
+
+    if(Number(temp_min) > Number(temp_max)){
+        return res.status(400).json({error: 'Minimum temperature cannot be greater than maximum temperature!'});
+    }
+
+    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results1) => {
+        if(error){
+            return res.status(500).json({error: 'Database query error!'});
+        }
+
+        if(results1.length == 0){
+            return res.status(400).json({error: 'User with this ID does not exist!'});
+        }
+
+        if(results1[0].role != 'admin'){
+            return res.status(403).json({error: 'You do not have permission to edit weather data!'});
+        }
+
+        pool.query('SELECT * FROM weather_forecasts WHERE ID=?', [id], (error, results1) => {
+            if(error){
+                return res.status(500).json({error: 'Database query error!'});
+            }
+
+            if(results1.length == 0){
+                return res.status(404).json({error: 'Weather forecast with this ID does not exist!'});
+            }
+
+            pool.query(
+                `UPDATE weather_forecasts
+                SET date=?, location=?, temp_min=?, temp_max=?, weather_type=?,
+                    precipitation_probability=?, wind_speed=?, uv_index=?
+                WHERE ID=?`,
+                [
+                    date,
+                    location,
+                    temp_min,
+                    temp_max,
+                    weather_type,
+                    precipitation_probability === undefined ? 0 : precipitation_probability,
+                    wind_speed === undefined ? 0 : wind_speed,
+                    uv_index === undefined || uv_index === '' ? null : uv_index,
+                    id
+                ],
+                (error, results) => {
+                    if(error){
+                        return res.status(500).json({error: 'Database update error!'});
+                    }
+
+                    return res.status(200).json({message: 'Weather data updated successfully!'});
+                }
+            );
+        });
+    });
+});
 
 //DELETE weather 
+app.delete('/admin/weather/:id', (req, res) => {
+    const id = req.params.id;
+    const { luid } = req.body;
 
+    if(!id || !luid){
+        return res.status(400).json({error: 'Missing required fields!'});
+    }
+
+    pool.query('SELECT * FROM users WHERE ID=?', [luid], (error, results1) => {
+        if(error){
+            return res.status(500).json({error: 'Database query error!'});
+        }
+
+        if(results1.length == 0){
+            return res.status(400).json({error: 'User with this ID does not exist!'});
+        }
+
+        if(results1[0].role != 'admin'){
+            return res.status(403).json({error: 'You do not have permission to delete weather data!'});
+        }
+
+        pool.query('SELECT * FROM weather_forecasts WHERE ID=?', [id], (error, results1) => {
+            if(error){
+                return res.status(500).json({error: 'Database query error!'});
+            }
+
+            if(results1.length == 0){
+                return res.status(404).json({error: 'Weather forecast with this ID does not exist!'});
+            }
+
+            pool.query('DELETE FROM weather_forecasts WHERE ID=?', [id], (error, results) => {
+                if(error){
+                    return res.status(500).json({error: 'Database delete error!'});
+                }
+
+                return res.status(200).json({message: 'Weather data deleted successfully!'});
+            });
+        });
+    });
+});
 
 //DENY user
 app.patch('/admin/status', (req, res) => {
@@ -353,3 +527,7 @@ app.patch('/admin/status', (req, res) => {
     })
 })
  
+
+app.listen(port, () => {
+    console.log(`WeatherAPI running on port ${port}`);
+});

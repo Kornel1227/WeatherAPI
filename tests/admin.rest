@@ -1,0 +1,76 @@
+
+### Get all weather reports
+GET http://localhost:4000/weather
+
+### Get one weather report
+GET http://localhost:4000/weather/1
+
+### Add weather report
+POST http://localhost:4000/admin/weather
+Content-Type: application/json
+
+{
+    "date": "2026-10-20",
+    "location": "Baja",
+    "temp_min": 9,
+    "temp_max": 18,
+    "weather_type": "Cloudy",
+    "precipitation_probability": 30,
+    "wind_speed": 15,
+    "uv_index": 2,
+    "luid": 1
+}
+
+### Update weather report
+PATCH http://localhost:4000/admin/weather/1
+Content-Type: application/json
+
+{
+    "date": "2026-10-20",
+    "location": "Baja",
+    "temp_min": 12,
+    "temp_max": 23,
+    "weather_type": "Sunny",
+    "precipitation_probability": 5,
+    "wind_speed": 8,
+    "uv_index": 4,
+    "luid": 1
+}
+
+### Delete weather report
+DELETE http://localhost:4000/admin/weather/1
+Content-Type: application/json
+
+{
+    "luid": 1
+}
+
+
+### Admin update name and email
+PATCH http://localhost:4000/users/1
+Content-Type: application/json
+
+{
+    "username": "Admin",
+    "email": "admin.@gmail.com",
+    "luid": 1
+}
+
+### Admin change password
+POST http://localhost:4000/users/1/passmod
+Content-Type: application/json
+
+{
+    "oldpass": "s",
+    "newpass": "NewAdmin123!",
+    "confirm": "NewAdmin123!"
+}
+
+### Deny user
+PATCH http://localhost:4000/admin/status
+Content-Type: application/json
+
+{
+    "luid": 1,
+    "uid": 3
+}
